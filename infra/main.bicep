@@ -9,10 +9,10 @@ param appName string
 @description('Primary location for all resources')
 param location string
 
-@description('Address space for the virtual network where the GitLab runner will be deployed')
+@description('Address space for the virtual network where the GitLab runner will be deployed. This should be a valid CIDR block. Leave empty if you are using an existing VNet.')
 param vnetAddressSpace string
 
-@description('Address space for the subnet where the GitLab runner will be deployed')
+@description('Address space for the subnet where the GitLab runner will be deployed. This should be a subset of the vnetAddressSpace. Leave empty if you are using an existing Subnet.')
 param subnetAddressSpace string
 
 @description('Gitlab token to register the runner')
