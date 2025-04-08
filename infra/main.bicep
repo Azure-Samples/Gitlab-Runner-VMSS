@@ -19,6 +19,12 @@ param subnetAddressSpace string
 @secure()
 param gitlabToken string
 
+@description('Existing VNet ID to use. If provided, a new VNet will not be created.')
+param existingVnetId string = ''
+
+@description('Existing Subnet ID to use. If provided, a new Subnet will not be created.')
+param existingSubnetId string = ''
+
 var tags = {
   'azd-env-name': appName
 }
@@ -54,5 +60,7 @@ module gitlabrunner 'core/gitlab-runner.bicep' = {
     vnetAddressSpace: vnetAddressSpace
     subnetAddressSpace: subnetAddressSpace
     gitlabToken: gitlabToken
+    existingVnetId: existingVnetId
+    existingSubnetId: existingSubnetId
   }
 }

@@ -32,6 +32,12 @@ param subnetAddressSpace string
 @secure()
 param gitlabToken string
 
+@description('Existing VNet ID to use. If provided, a new VNet will not be created.')
+param existingVnetId string = ''
+
+@description('Existing Subnet ID to use. If provided, a new Subnet will not be created.')
+param existingSubnetId string = ''
+
 var resourceNames = {
   vnetName: naming.virtualNetwork.name
   subnet1Name: '${naming.subnet.name}-01'
@@ -57,7 +63,7 @@ var imageReference = runnerType == 'Linux'
       version: 'latest'
     }
 
-module virtualNetwork 'br/public:avm/res/network/virtual-network:0.6.1' = {
+module virtualNetwork 'br/public:avm/res/network/virtual-network:0.6.1' = if (existingVnetId == '') {
   name: resourceNames.vnetName
   params: {
     addressPrefixes: [
@@ -95,7 +101,7 @@ module virtualMachineScaleSet 'br/public:avm/res/compute/virtual-machine-scale-s
             name: 'ipconfig1'
             properties: {
               subnet: {
-                id: virtualNetwork.outputs.subnetResourceIds[0]
+                id: existingSubnetId != '' ? existingSubnetId : virtualNetwork.outputs.subnetResourceIds[0]
               }
             }
           }
@@ -135,7 +141,7 @@ module virtualMachine 'br/public:avm/res/compute/virtual-machine:0.12.3' = {
         ipConfigurations: [
           {
             name: 'ipconfig01'
-            subnetResourceId: virtualNetwork.outputs.subnetResourceIds[0]
+            subnetResourceId: existingSubnetId != '' ? existingSubnetId : virtualNetwork.outputs.subnetResourceIds[0]
           }
         ]
         nicSuffix: resourceNames.managerNicSuffix
@@ -184,6 +190,35 @@ resource customScriptExtension 'Microsoft.Compute/virtualMachines/extensions@202
       ]
       #disable-next-line protect-commandtoexecute-secrets
       commandToExecute: 'bash configure-manager-vm.sh --gitlab-token ${gitlabToken} --subscription-id ${subscription().subscriptionId} --resource-group-name ${resourceGroup().name} --username ${scaleSetUserName} --password ${scaleSetUserPassword} --vmss-name ${virtualMachineScaleSet.outputs.name}'
+    }
+  }
+}
+
+resource vmssMachine 'Microsoft.Compute/virtualMachineScaleSets@2022-11-01' existing = {
+  name: resourceNames.vmssName
+  dependsOn: [
+    virtualMachineScaleSet
+  ]
+}
+
+resource vmssCustomScriptExtension 'Microsoft.Compute/virtualMachineScaleSets/extensions@2022-11-01' = {
+  name: 'VMSSCustomScript'
+  parent: vmssMachine
+  location: location
+  properties: {
+    publisher: runnerType == 'Linux' ? 'Microsoft.Azure.Extensions' : 'Microsoft.Compute'
+    type: 'CustomScript'
+    typeHandlerVersion: '2.0'
+    autoUpgradeMinorVersion: true
+    settings: {
+      fileUris: [
+        runnerType == 'Linux'
+          ? 'https://raw.githubusercontent.com/pankajagrawal16/Gitlab-Runner-VMSS/refs/heads/main/scripts/configure-vmss-linux.sh'
+          : 'https://raw.githubusercontent.com/pankajagrawal16/Gitlab-Runner-VMSS/refs/heads/main/scripts/configure-vmss-windows.ps1'
+      ]
+      commandToExecute: runnerType == 'Linux'
+        ? 'bash configure-vmss-linux.sh --gitlab-token ${gitlabToken}'
+        : 'powershell.exe -ExecutionPolicy Unrestricted -File configure-vmss-windows.ps1 -GitlabToken ${gitlabToken}'
     }
   }
 }
