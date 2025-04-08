@@ -204,7 +204,6 @@ resource vmssMachine 'Microsoft.Compute/virtualMachineScaleSets@2022-11-01' exis
 resource vmssCustomScriptExtension 'Microsoft.Compute/virtualMachineScaleSets/extensions@2022-11-01' = {
   name: 'VMSSCustomScript'
   parent: vmssMachine
-  location: location
   properties: {
     publisher: runnerType == 'Linux' ? 'Microsoft.Azure.Extensions' : 'Microsoft.Compute'
     type: 'CustomScript'
@@ -217,8 +216,8 @@ resource vmssCustomScriptExtension 'Microsoft.Compute/virtualMachineScaleSets/ex
           : 'https://raw.githubusercontent.com/Azure-Samples/Gitlab-Runner-VMSS/refs/heads/main/scripts/configure-vmss-windows.ps1'
       ]
       commandToExecute: runnerType == 'Linux'
-        ? 'bash configure-vmss-linux.sh --gitlab-token ${gitlabToken}'
-        : 'powershell.exe -ExecutionPolicy Unrestricted -File configure-vmss-windows.ps1 -GitlabToken ${gitlabToken}'
+        ? 'bash configure-vmss-linux.sh'
+        : 'powershell.exe -ExecutionPolicy Unrestricted -File configure-vmss-windows.ps1'
     }
   }
 }
