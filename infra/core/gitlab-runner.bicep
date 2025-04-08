@@ -186,7 +186,7 @@ resource customScriptExtension 'Microsoft.Compute/virtualMachines/extensions@202
     autoUpgradeMinorVersion: true
     settings: {
       fileUris: [
-        'https://raw.githubusercontent.com/pankajagrawal16/Gitlab-Runner-VMSS/refs/heads/main/scripts/configure-manager-vm.sh'
+        'https://raw.githubusercontent.com/Azure-Samples/Gitlab-Runner-VMSS/refs/heads/main/scripts/configure-manager-vm.sh'
       ]
       #disable-next-line protect-commandtoexecute-secrets
       commandToExecute: 'bash configure-manager-vm.sh --gitlab-token ${gitlabToken} --subscription-id ${subscription().subscriptionId} --resource-group-name ${resourceGroup().name} --username ${scaleSetUserName} --password ${scaleSetUserPassword} --vmss-name ${virtualMachineScaleSet.outputs.name}'
@@ -213,8 +213,8 @@ resource vmssCustomScriptExtension 'Microsoft.Compute/virtualMachineScaleSets/ex
     settings: {
       fileUris: [
         runnerType == 'Linux'
-          ? 'https://raw.githubusercontent.com/pankajagrawal16/Gitlab-Runner-VMSS/refs/heads/main/scripts/configure-vmss-linux.sh'
-          : 'https://raw.githubusercontent.com/pankajagrawal16/Gitlab-Runner-VMSS/refs/heads/main/scripts/configure-vmss-windows.ps1'
+          ? 'https://raw.githubusercontent.com/Azure-Samples/Gitlab-Runner-VMSS/refs/heads/main/scripts/configure-vmss-linux.sh'
+          : 'https://raw.githubusercontent.com/Azure-Samples/Gitlab-Runner-VMSS/refs/heads/main/scripts/configure-vmss-windows.ps1'
       ]
       commandToExecute: runnerType == 'Linux'
         ? 'bash configure-vmss-linux.sh --gitlab-token ${gitlabToken}'
