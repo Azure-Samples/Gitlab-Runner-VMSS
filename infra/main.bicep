@@ -20,10 +20,17 @@ param subnetAddressSpace string
 param gitlabToken string
 
 @description('Existing VNet ID to use. If provided, a new VNet will not be created.')
-param existingVnetId string = ''
+param existingVnetId string
 
 @description('Existing Subnet ID to use. If provided, a new Subnet will not be created.')
-param existingSubnetId string = ''
+param existingSubnetId string
+
+@description('The type of GitLab runner to deploy. Options are "Linux" or "Windows".')
+@allowed([
+  'Linux'
+  'Windows'
+])
+param runnerType string
 
 var tags = {
   'azd-env-name': appName

@@ -23,8 +23,12 @@ Same can be replicated for Windows VMSS as well.
 
 - In your Gitlab account, create a new project or use an existing one. Register a new runner in your project. You will get a registration token that you will use to register the runner on the VMSS.
 
-- Create a new Azure VMSS using the Azure CLI. You can use the following command to create a new VMSS:
+- You can use the following command to create and configure gitlab runner using Azure CLI. Follow the prompts to set up the runner. You can either pass your own virtual network or let it create a new one for you with address space you specify.
+
+The runner can be provisioned for type linux or windows. The default is linux.
 
   ```bash
     azd up
   ```
+
+> Note: The Vnet created by module is setup with minimal security best practices configurations for ease of demo. You can modify the security rules as per your requirements.  If you are passing your own Vnet, make sure to open the ports for the runner to communicate with GitLab so that runner can register itself.
