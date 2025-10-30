@@ -92,33 +92,171 @@ graph TB
 
 ## Quick Start
 
-1. **Clone this repository**:
-   ```bash
-   git clone https://github.com/Azure-Samples/Gitlab-Runner-VMSS.git
-   cd Gitlab-Runner-VMSS
-   ```
+Follow these steps to deploy your GitLab Runner infrastructure on Azure:
 
-2. **Get your GitLab Runner Token**:
-   - Navigate to your GitLab project
-   - Go to Settings → CI/CD → Runners
-   - Click "New project runner"
-   - Copy the registration token
+### Step 1: Clone the Repository
 
-3. **Deploy the infrastructure**:
+```bash
+git clone https://github.com/Azure-Samples/Gitlab-Runner-VMSS.git
+cd Gitlab-Runner-VMSS
+```
+
+### Step 2: Obtain Your GitLab Runner Registration Token
+
+Before deploying, you need a runner registration token from GitLab:
+
+1. **Navigate to your GitLab project** (e.g., `https://gitlab.com/your-username/your-project`)
+2. **Go to Settings → CI/CD**
+3. **Expand the "Runners" section**
+4. **Click "New project runner"** button
+5. **Configure runner settings**:
+   - Select Linux or Windows as the operating system
+   - Add optional tags if needed (e.g., `azure`, `vmss`)
+   - Check "Run untagged jobs" if you want this runner to pick up all jobs
+6. **Click "Create runner"**
+7. **Copy the registration token** displayed (starts with `glrt-`) - you'll need this in the next step
+
+> 💡 **Tip**: Keep this token secure. You can regenerate it later if needed from the same CI/CD settings page.
+
+### Step 3: Login to Azure
+
+Ensure you're logged into Azure CLI and have the correct subscription selected:
+
+```bash
+# Login to Azure (if not already logged in)
+az login
+
+# List your subscriptions
+az account list --output table
+
+# Set the subscription you want to use
+az account set --subscription "Your-Subscription-Name-or-ID"
+
+# Verify the correct subscription is selected
+az account show --output table
+```
+
+### Step 4: Deploy the Infrastructure
+
+Run the Azure Developer CLI deployment command:
+
+```bash
+azd up
+```
+
+The deployment process will prompt you for the following information:
+
+1. **Environment name**: 
+   - Enter a unique name for your deployment (e.g., `gitlab-prod`, `my-runners`)
+   - This will be used to name your Azure resources
+   - Use lowercase letters, numbers, and hyphens only
+
+2. **Azure location**: 
+   - Choose an Azure region (e.g., `eastus`, `westeurope`, `southeastasia`)
+   - Select a region close to your users for better performance
+   - Check [Azure Products by Region](https://azure.microsoft.com/en-us/explore/global-infrastructure/products-by-region/) for availability
+
+3. **GitLab token**: 
+   - Paste the registration token you obtained in Step 2
+   - The token will be stored securely in Azure Key Vault
+
+4. **Runner type**:
+   - Choose `linux` (default) or `windows`
+   - Must match the OS you selected when creating the runner in GitLab
+
+5. **Virtual network configuration**:
+   - **Option A - Create new** (recommended for new deployments):
+     - Provide a VNet address space (default: `10.0.0.0/16`)
+     - Provide a subnet address space (default: `10.0.1.0/24`)
+   - **Option B - Use existing**:
+     - Provide your existing VNet resource ID
+     - Provide your existing subnet resource ID
+     - Ensure the subnet has adequate IP address space and network connectivity
+
+**What happens during deployment:**
+- Creates an Azure Resource Group
+- Deploys a Virtual Network (if creating new)
+- Creates a Manager VM with GitLab Runner installed
+- Creates a Virtual Machine Scale Set (VMSS) for runner instances
+- Configures auto-scaling policies
+- Registers the runner with your GitLab instance
+
+**Deployment time:** Expect the deployment to take 5-10 minutes.
+
+### Step 5: Verify the Deployment
+
+After deployment completes, verify everything is working correctly:
+
+1. **Check the deployment output**:
    ```bash
-   azd up
+   azd show
    ```
+   This displays your deployment details and resource information.
+
+2. **Verify in GitLab**:
+   - Return to your GitLab project
+   - Go to **Settings → CI/CD → Runners**
+   - You should see your new runner listed with a green "online" indicator
+   - The runner description will show `azure-vmss-runner-{environment-name}`
+
+3. **Test the runner** (optional):
+   - Create a simple `.gitlab-ci.yml` file in your project:
+     ```yaml
+     test-runner:
+       script:
+         - echo "Hello from Azure VMSS runner!"
+         - uname -a
+     ```
+   - Commit and push the file
+   - Go to **CI/CD → Pipelines** to see your job running on the new runner
+
+### Step 6: Monitor Your Infrastructure
+
+Access the Azure Portal to monitor your deployment:
+
+```bash
+# Open your resource group in the Azure Portal
+az group show --name rg-{your-environment-name} --query id -o tsv | xargs -I {} open "https://portal.azure.com/#@/resource{}"
+```
+
+Or manually navigate to [portal.azure.com](https://portal.azure.com) and find your resource group named `rg-{your-environment-name}`.
+
+**What to check:**
+- ✅ Manager VM is running
+- ✅ VMSS is created (may show 0 instances until jobs are queued)
+- ✅ Network security groups are configured
+- ✅ No deployment errors in the Activity Log
+
+### Troubleshooting Startup Issues
+
+If the runner doesn't appear online in GitLab:
+
+1. **Verify the GitLab token** is correct:
+   ```bash
+   # SSH to the manager VM (get IP from Azure Portal)
+   ssh azureuser@{manager-vm-ip}
    
-   You'll be prompted for:
-   - **Environment name**: A unique name for your deployment
-   - **Azure location**: The Azure region to deploy to
-   - **GitLab token**: Your runner registration token
-   - **Virtual network settings**: Choose existing or create new
-   - **Runner type**: Linux (default) or Windows
+   # Check GitLab Runner status
+   sudo gitlab-runner verify
+   sudo systemctl status gitlab-runner
+   ```
 
-4. **Verify deployment**:
-   - Check your GitLab project's CI/CD settings to see the registered runner
-   - The runner should show as "online" and ready to accept jobs
+2. **Check manager VM logs**:
+   ```bash
+   sudo journalctl -u gitlab-runner -f
+   ```
+
+3. **Verify network connectivity**:
+   ```bash
+   curl -I https://gitlab.com
+   ```
+
+4. **Check Azure deployment logs**:
+   - Go to your resource group in Azure Portal
+   - Click on "Deployments" in the left menu
+   - Review any failed deployments
+
+For more detailed troubleshooting, see the [Monitoring and Troubleshooting](#monitoring-and-troubleshooting) section below.
 
 ## Configuration Options
 
